@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument('--max_length', type=int, default=1152, help='max length')
     parser.add_argument('--prefix_length', type=int, default=128, help='prefix length')
     parser.add_argument('--decode_lengths', type=str, default='1,2,4,8,16,32,64,128,256,512,768,1024', help='dec length')
-    parser.add_argument('--warmup', type=int, default=1, help='number of warmup forward passes')
+    parser.add_argument('--warmup', type=int, default=3, help='number of warmup forward passes')
     parser.add_argument('--num_repeats', type=int, default=10, help='number of forward passes to run')
     parser.add_argument('--offloading', action='store_true')
     parser.add_argument('--output_dir', type=str, default='./output', help='output directory')
