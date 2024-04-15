@@ -1,4 +1,5 @@
 import argparse
+import os
 import json
 import time
 import torch
@@ -76,9 +77,11 @@ def benchmark(args):
 
 if __name__ == '__main__':
     args = get_args()
-    print(f"STARTING TEST: ", args)
     
+    print(f"STARTING TEST: ", args)
     result_dict = benchmark(args)
+
+    os.makedirs(args.output_dir, exist_ok=True)
     filename = f"{args.output_dir}/{args.model.replace('/','--')}_forward_pass_times.json"
     with open(filename, 'w') as f:
         json.dump(result_dict, f, indent=4)
