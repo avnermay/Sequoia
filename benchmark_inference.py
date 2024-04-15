@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument('--warmup', type=int, default=20, help='number of warmup forward passes')
     parser.add_argument('--num_repeats', type=int, default=50, help='number of forward passes to run')
     parser.add_argument('--offloading', action='store_true')
-    parser.add_argument('--output_dir', type=str, default='/home/avner/sequoia', help='output directory')
+    parser.add_argument('--output_dir', type=str, default='~/sequoia', help='output directory')
     args = parser.parse_args()
     return args
 

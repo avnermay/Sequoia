@@ -40,7 +40,8 @@ models=(
 )
 
 SEQUOIA_PATH=/work/avner/git/Sequoia
+OUTPUT_DIR=/home/avner/sequoia
 
 for model in "${models[@]}"; do
-    python $SEQUOIA_PATH/benchmark_inference.py --model $model
+    python $SEQUOIA_PATH/benchmark_inference.py --model $model --output_dir $OUTPUT_DIR
 done
