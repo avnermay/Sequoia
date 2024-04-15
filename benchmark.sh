@@ -30,18 +30,24 @@
 #     - t 0.6, top_p 0.9
 #     - t 0.0
 
-models=(
-    "meta-llama/Llama-2-7b-hf"
+target_models=(
     "meta-llama/Llama-2-70b-hf"
-    "meta-llama/Llama-2-7b-chat-hf"
     "meta-llama/Llama-2-70b-chat-hf"
     "lmsys/vicuna-33b-v1.3"
+)
+draft_models=(
+    "meta-llama/Llama-2-7b-hf"
+    "meta-llama/Llama-2-7b-chat-hf"
     "princeton-nlp/Sheared-LLaMA-1.3B"
 )
 
 SEQUOIA_PATH=/work/avner/git/Sequoia
 OUTPUT_DIR=/home/avner/sequoia
 
-for model in "${models[@]}"; do
+for model in "${target_models[@]}"; do
+    python $SEQUOIA_PATH/benchmark_inference.py --model $model --output_dir $OUTPUT_DIR --offloading
+done
+
+for model in "${draft_models[@]}"; do
     python $SEQUOIA_PATH/benchmark_inference.py --model $model --output_dir $OUTPUT_DIR
 done
