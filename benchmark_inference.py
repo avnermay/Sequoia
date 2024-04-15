@@ -5,6 +5,7 @@ import time
 import torch
 
 from Engine.Engine import GraphInferenceEngineTG
+from Engine.offload_engine import OffloadEngine
 from utils import _make_causal_mask
 from tqdm import tqdm, trange
 
@@ -33,8 +34,12 @@ def benchmark(args):
 
     decode_lengths = [int(s) for s in args.decode_lengths.split(',')]
     assert max(decode_lengths) + args.prefix_length <= args.max_length
-    
-    graph_engine = GraphInferenceEngineTG(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device, offloading=args.offloading)
+
+    if args.offloading:
+        graph_engine = OffloadEngine(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device)  # set stay_layers?
+    else:
+        graph_engine = GraphInferenceEngineTG(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device, offloading=args.offloading)
+
     graph_engine.inference(input_ids=prefix, storage_ids=prefix_storage_ids, position_ids=prefix_position_ids, attn_mask=attn_mask[..., :args.prefix_length,:args.prefix_length])
 
     avg_forward_pass_times = []
