@@ -10,34 +10,16 @@ from tqdm import tqdm
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_path', type=str, default='/work/avner/results/spec_decoding/grow_map.pt')
-    parser.add_argument('--acceptance_rate_vector', type=str, default=None,
-                        help='Pytorch tensor with acceptance rates as function of tree branch width')
-    # Hacky way of taking output of spec-dec/eval.py as input to this script.
-    parser.add_argument('--eval_results_json', type=str,
-                        default='/work/avner/results/spec_decoding/evals/march_eval_unpacked_target_mixtral_draft_eagle-ft-8B-userdata.json')
+    parser.add_argument('--output_path', type=str, default='/work/avner/results/sequoia/growmaps/growmaps')
+    parser.add_argument('--acceptance_rates', type=str, default=None,
+                        help='Json file or pytorch file with acceptance rates as function of tree branch width')
+    parser.add_argument('--target_model_speeds', type=str, default=None,
+                        help='Json file with target model speeds as function of # of tokens')
+    parser.add_argument('--draft_model_speeds', type=str, default=None,
+                        help='Json file with draft model speeds as function of # of tokens (only tokens=1 is used)')
     parser.add_argument('--max_depth', type=int, default=16)
-    parser.add_argument('--max_budget', type=int, default=256)
-    parser.add_argument('--draft_time', type=float, default=2.0,
-                        help='Time for a forward pass of draft model, batch size=1')
-    parser.add_argument('--target_times', type=float, nargs='+',
-                        default=[47.0, 80.0, 85.0, 90.0, 94.0, 98.0, 100.0, 102.0, 115.0],
-                        help='Target verification time for each tree size in `valid_budgets`.')
-    parser.add_argument('--valid_budgets', type=int, nargs='+',
-                        default=[ 1, 2, 4, 8, 16, 32, 64, 128, 256],
-                        help='List of budgets to consider for optimal tree size')
     args = parser.parse_args()
-    assert len(args.valid_budgets) == len(args.target_times)
     return args
-
-
-def get_alpha(path):
-    with open(path, 'r') as f:
-        eagle_ft_eval_results = json.load(f)
-    acceptance_rates = eagle_ft_eval_results['acceptance_rate']
-    alpha = np.array([0,0] + acceptance_rates[2])
-    alpha = alpha[1:] - alpha[:-1]
-    return alpha
 
 
 def dynamic_program(alpha, max_budget, max_depth, max_branch):
@@ -206,14 +188,28 @@ def plot_tree(tree):
 
 if __name__ == '__main__':
     args = get_args()
-    alpha = get_alpha(args.eval_results_json)
-    max_depth = args.max_depth
-    max_budget = args.max_budget
-    max_branch = alpha.shape[0] - 1
-    draft_inference_time = args.draft_time
-    target_verify_time = np.array(args.target_times)
-    valid_budget = args.valid_budgets
+    # alpha = get_alpha(args.eval_results_json)
+    if args.acceptance_rates.endswith('.json'):
+        with open(args.acceptance_rates, 'r') as f:
+            acc_rate_dict = json.load(f)
+            alpha = np.array(acc_rate_dict['acceptance_rates'])
+    else:
+        alpha = torch.load(args.acceptance_rates).numpy()
 
+    with open(args.target_model_speeds, 'r') as f:
+        target_model_speeds_dict = json.load(f)
+        target_verify_time = np.array(target_model_speeds_dict['avg_forward_pass_times'])
+        valid_budget = target_model_speeds_dict['decode_lengths']
+
+    with open(args.draft_model_speeds, 'r') as f:
+        draft_model_speeds_dict = json.load(f)
+        assert draft_model_speeds_dict['decode_lengths'][0] == 1, (
+            'We need the time for the target model to process 1 token')
+        draft_inference_time = draft_model_speeds_dict['avg_forward_pass_times'][0]
+
+    max_depth = args.max_depth
+    max_budget = valid_budget[-1]
+    max_branch = alpha.shape[0] - 1
     results, T, branch_map = dynamic_program(alpha, max_budget, max_depth, max_branch)
     best_tree_size, best_tree_depth = get_optimal_tree_size_and_depth(draft_inference_time, target_verify_time, valid_budget, results)
     max_branches = T[best_tree_size, best_tree_depth].argmax(dim=0).item()
@@ -227,4 +223,10 @@ if __name__ == '__main__':
     # Code for plotting the tree
     # tree = create_tree(all_nodes)
     # plot_tree(tree)
-    torch.save(grow_map, args.output_path)
+
+    # For convenience, we save as both a pytorch file and as a json file.
+    torch.save(grow_map, args.output_path + '.pt')
+    with open(args.output_path + '.json', 'w') as f:
+        grow_map['mask'] = grow_map['mask'].numpy().tolist()
+        grow_map['depth'] = grow_map['depth'].numpy().tolist()
+        json.dump(grow_map, f)

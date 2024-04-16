@@ -30,13 +30,37 @@
 #     - t 0.6, top_p 0.9
 #     - t 0.0
 
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
     --draft meta-llama/Llama-2-7b-chat-hf \
     --target meta-llama/Llama-2-70b-chat-hf \
     --dataset oasst \
     --temp 0.6 \
     --top_p 0.9 \
-    --algorithm stochastic \
+    --end 412 \
+    --offloading \
+    --output_dir /work/avner/results/sequoia"
+sbatch --gpus=8 --nodelist=mk-viii-01 \
+  --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
+  /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
+
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
+    --draft meta-llama/Llama-2-7b-chat-hf \
+    --target meta-llama/Llama-2-70b-chat-hf \
+    --dataset oasst \
+    --temp 0.05 \
+    --end 412 \
+    --offloading \
+    --output_dir /work/avner/results/sequoia"
+sbatch --gpus=8 --nodelist=mk-viii-01 \
+  --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
+  /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
+
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
+    --draft meta-llama/Llama-2-7b-hf \
+    --target meta-llama/Llama-2-70b-hf \
+    --dataset wikitext \
+    --temp 0.6 \
+    --top_p 0.9 \
     --end 412 \
     --offloading \
     --output_dir /work/avner/results/sequoia"
@@ -44,53 +68,24 @@ sbatch --gpus=8 --nodelist=mk-viii-06 \
   --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
   /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
 
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
-    --draft meta-llama/Llama-2-7b-chat-hf \
-    --target meta-llama/Llama-2-70b-chat-hf \
-    --dataset oasst \
-    --algorithm greedy \
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
+    --draft meta-llama/Llama-2-7b-hf \
+    --target meta-llama/Llama-2-70b-hf \
+    --dataset wikitext \
     --temp 0.05 \
     --end 412 \
     --offloading \
     --output_dir /work/avner/results/sequoia"
-sbatch --gpus=8 \
+sbatch --gpus=8 --nodelist=mk-viii-06 \
   --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
   /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
 
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
-    --draft meta-llama/Llama-2-7b-hf \
-    --target meta-llama/Llama-2-70b-hf \
-    --dataset wikitext \
-    --temp 0.6 \
-    --top_p 0.9 \
-    --algorithm stochastic \
-    --end 412 \
-    --offloading \
-    --output_dir /work/avner/results/sequoia"
-sbatch --gpus=8 --nodelist=mk-viii-08 \
-  --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
-  /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
-
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
-    --draft meta-llama/Llama-2-7b-hf \
-    --target meta-llama/Llama-2-70b-hf \
-    --dataset wikitext \
-    --algorithm greedy \
-    --temp 0.05 \
-    --end 412 \
-    --offloading \
-    --output_dir /work/avner/results/sequoia"
-sbatch --gpus=8 \
-  --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
-  /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
-
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
     --draft princeton-nlp/Sheared-LLaMA-1.3B \
     --target lmsys/vicuna-33b-v1.3 \
     --dataset oasst \
     --temp 0.6 \
     --top_p 0.9 \
-    --algorithm stochastic \
     --end 412 \
     --offloading \
     --output_dir /work/avner/results/sequoia"
@@ -99,15 +94,14 @@ sbatch --gpus=8 --nodelist=mk-viii-09 \
   /work/avner/git/spec-dec/launch_scripts/launch_job.slurm
 
 
-CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates.py \
+CMD="/home/avner/anaconda3/envs/env2/bin/python /work/avner/git2/Sequoia/measure_acceptance_rates_fast.py \
     --draft princeton-nlp/Sheared-LLaMA-1.3B \
     --target lmsys/vicuna-33b-v1.3 \
     --dataset oasst \
-    --algorithm greedy \
     --temp 0.05 \
     --end 412 \
     --offloading \
     --output_dir /work/avner/results/sequoia"
-sbatch --gpus=8 \
+sbatch --gpus=8 --nodelist=mk-viii-09 \
   --export=HF_HOME,HF_DATASETS_CACHE,TRANSFORMERS_CACHE,DATA_DIR,WANDB_CACHE_DIR,WANDB_DATA_DIR,WANDB_ARTIFACT_DIR,CMD_TO_RUN="$CMD" \
   /work/avner/git/spec-dec/launch_scripts/launch_job.slurm

@@ -78,17 +78,18 @@ def simulation_stochastic(
         temp=0.6,
         top_p=0.9,
         max_width=4, 
-        max_length=512,
+        max_length=256,
     ):
+    max_input_length = max_length + max_width
     num_eval_steps = len(dataloader)
     num_decoding_steps = 0
     num_large_model_steps = 0
     dtype = torch.float16
-    attn_mask = torch.full((max_length, max_length), torch.finfo(dtype).min, dtype=dtype, device='cuda:0')
-    sequence = torch.tensor(list(range(max_length)), device='cuda:0').long().unsqueeze(-1)
-    new_tokens_buffer =  torch.zeros(max_length).long().to('cuda:0')
-    parents_buffer =  torch.zeros(max_length).long().to('cuda:0')
-    position_ids = torch.zeros(max_length).long().to('cuda:0')
+    attn_mask = torch.full((max_input_length, max_input_length), torch.finfo(dtype).min, dtype=dtype, device='cuda:0')
+    sequence = torch.tensor(list(range(max_input_length)), device='cuda:0').long().unsqueeze(-1)
+    new_tokens_buffer =  torch.zeros(max_input_length).long().to('cuda:0')
+    parents_buffer =  torch.zeros(max_input_length).long().to('cuda:0')
+    position_ids = torch.zeros(max_input_length).long().to('cuda:0')
     branch_prob = torch.zeros(max_width + 1).to('cuda:0')
     output_branch_prob = torch.zeros(max_width + 2).to('cuda:0')
     with torch.no_grad():
@@ -99,15 +100,17 @@ def simulation_stochastic(
             if labels[0][-1] == -100: terminate = True
             draft_kv_len = 0
             target_kv_len = 0
-            while input_ids.shape[1] < 256 and not terminate:
+            while input_ids.shape[1] < max_length and not terminate:
                 attn_mask.fill_(torch.finfo(dtype).min)
-                spectree = SpecTreeTest(prefix=input_ids.squeeze(0), device='cuda:0', temperature=temp,
-                                        top_p=top_p, 
-                                        draft_kv_len=draft_kv_len, target_kv_len=target_kv_len,
-                                        draft_model_engine=draft_model, target_model_engine=target_model, max_length=max_length,
-                                        attn_mask = attn_mask, sequence = sequence, new_tokens_buffer = new_tokens_buffer, 
-                                        parents_buffer = parents_buffer, 
-                                        position_ids = position_ids, max_width=max_width)
+                spectree = SpecTreeTest(
+                    prefix=input_ids.squeeze(0), device='cuda:0', temperature=temp,
+                    top_p=top_p,
+                    draft_kv_len=draft_kv_len, target_kv_len=target_kv_len,
+                    draft_model_engine=draft_model, target_model_engine=target_model, max_length=max_input_length,
+                    attn_mask = attn_mask, sequence = sequence, new_tokens_buffer = new_tokens_buffer,
+                    parents_buffer = parents_buffer,
+                    position_ids = position_ids, max_width=max_width,
+                )
                 
                 
                 valid_tokens, draft_kv_len, target_kv_len,  b, terminate = spectree.verify(benchmark=True)
@@ -137,17 +140,18 @@ def simulation_greedy(
         dataloader: DataLoader,
         output_file: str,
         max_width=4,
-        max_length=512,
+        max_length=256,
     ):
+    max_input_length = max_length + max_width
     num_eval_steps = len(dataloader)
     num_decoding_steps = 0
     num_large_model_steps = 0
     dtype = torch.float16
-    attn_mask = torch.full((max_length, max_length), torch.finfo(dtype).min, dtype=dtype, device='cuda:0')
-    sequence = torch.tensor(list(range(max_length)), device='cuda:0').long().unsqueeze(-1)
-    new_tokens_buffer =  torch.zeros(max_length).long().to('cuda:0')
-    parents_buffer =  torch.zeros(max_length).long().to('cuda:0')
-    position_ids = torch.zeros(max_length).long().to('cuda:0')
+    attn_mask = torch.full((max_input_length, max_input_length), torch.finfo(dtype).min, dtype=dtype, device='cuda:0')
+    sequence = torch.tensor(list(range(max_input_length)), device='cuda:0').long().unsqueeze(-1)
+    new_tokens_buffer =  torch.zeros(max_input_length).long().to('cuda:0')
+    parents_buffer =  torch.zeros(max_input_length).long().to('cuda:0')
+    position_ids = torch.zeros(max_input_length).long().to('cuda:0')
     branch_prob = torch.zeros(max_width + 1).to('cuda:0')
     output_branch_prob = torch.zeros(max_width + 2).to('cuda:0')
     with torch.no_grad():
@@ -158,14 +162,16 @@ def simulation_greedy(
             if labels[0][-1] == -100: terminate = True
             draft_kv_len = 0
             target_kv_len = 0
-            while input_ids.shape[1] < 256 and terminate == False:
+            while input_ids.shape[1] < max_length and terminate == False:
                 attn_mask.fill_(torch.finfo(dtype).min)
-                spectree = GreedyTreeTest(prefix=input_ids.squeeze(0), device='cuda:0',
-                                    draft_kv_len=draft_kv_len, target_kv_len=target_kv_len,
-                                    draft_model_engine=draft_model, target_model_engine=target_model, max_length=max_length,
-                                    attn_mask = attn_mask, sequence = sequence, new_tokens_buffer = new_tokens_buffer, 
-                                    parents_buffer = parents_buffer, 
-                                    position_ids = position_ids, max_width=max_width)
+                spectree = GreedyTreeTest(
+                    prefix=input_ids.squeeze(0), device='cuda:0',
+                    draft_kv_len=draft_kv_len, target_kv_len=target_kv_len,
+                    draft_model_engine=draft_model, target_model_engine=target_model, max_length=max_input_length,
+                    attn_mask = attn_mask, sequence = sequence, new_tokens_buffer = new_tokens_buffer,
+                    parents_buffer = parents_buffer,
+                    position_ids = position_ids, max_width=max_width,
+                )
                 
                 valid_tokens, draft_kv_len, target_kv_len,  b, terminate = spectree.verify(benchmark=True)
                 initial_size = input_ids.shape[1]
@@ -217,8 +223,9 @@ def get_tokenized_dataloader(dataset, start, end):
 if __name__ == '__main__':
     args = get_args()
     dataloader = get_tokenized_dataloader(args.dataset, args.start, args.end)
-    draft_model = GraphInferenceEngine(max_length=args.max_length, model_name_or_path=args.draft, dtype=torch.float16, device='cuda:0')
-    target_model = GraphInferenceEngineTG(max_length=args.max_length, model_name_or_path=args.target, dtype=torch.float16, device='cuda:0', offloading=args.offloading)
+    max_input_length = args.max_length + args.max_width
+    draft_model = GraphInferenceEngine(max_length=max_input_length, model_name_or_path=args.draft, dtype=torch.float16, device='cuda:0')
+    target_model = GraphInferenceEngineTG(max_length=max_input_length, model_name_or_path=args.target, dtype=torch.float16, device='cuda:0', offloading=args.offloading)
     graph_capture_list = list(range(1, 129))
     draft_model.initialize_cuda_graph(graph_capture_list)
 

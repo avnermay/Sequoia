@@ -326,7 +326,6 @@ class SpecTreeTest(Tree):
         self.r = torch.rand(len(position_ids)).to(self.device)
         self.storage_ids = torch.arange(self.max_length).to(self.device)
         
-        
         if draft_kv_len == 0:
             draft_model_outputs = self.draft_model_engine.inference(input_ids=self.tokens[:self.num_nodes].unsqueeze(0), 
                                 storage_ids=self.storage_ids[:self.num_nodes], 
