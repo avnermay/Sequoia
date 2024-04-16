@@ -23,6 +23,8 @@ import ssl
 import urllib.request
 import os
 from time import sleep
+
+
 def download_url(url: str, folder="folder"):
     """
     Downloads the content of an url to a folder. Modified from \

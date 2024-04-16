@@ -2,10 +2,12 @@ import torch
 import dataclasses
 from torch.nn.functional import softmax
 
+
 def get_residual(p: torch.Tensor, q:torch.Tensor):
     residual = (p - q).relu_()
     residual = residual / (residual.sum(dim=-1).unsqueeze(-1))
     return residual
+
 
 def sampling_without_replacement(
         sampling_logits: torch.Tensor, 
@@ -17,6 +19,7 @@ def sampling_without_replacement(
         position = (rand.log()/sampling_q).topk(k=num_samples).indices.flatten()
         return position
 
+
 def sampling_with_replacement(
         sampling_logits: torch.Tensor,   
         num_samples: int,
@@ -26,10 +29,13 @@ def sampling_with_replacement(
         sampling_q = softmax(sampling_logits / temperature, dim=-1)    
         position = sampling_q.multinomial(num_samples=num_samples, replacement=False).flatten()
         return position
+
+
 def sampling_argmax(
         sampling_logits: torch.Tensor, 
         num_samples: int):
         return sampling_logits.topk(k=num_samples).indices.flatten()
+
 
 def expand_kv(kv_cache, k):
     kv_shape = kv_cache[0][0].shape
@@ -38,6 +44,7 @@ def expand_kv(kv_cache, k):
         new_kv_cache = new_kv_cache + ([kv[0].expand(k, kv_shape[1], kv_shape[2], kv_shape[3]), 
                 kv[1].expand(k, kv_shape[1], kv_shape[2], kv_shape[3])],)
     return new_kv_cache
+
 
 def cat_kv(old_kv, delta_kv, cut_len :int):
     new_kv_cache = ()
@@ -76,6 +83,7 @@ def get_sampling_logits(logits :torch.Tensor, top_p:float, T: float, replicate =
                 logits[indices_to_remove] = float('-inf')
     return logits
 
+
 def select_kv(kv_cache: tuple[list[torch.FloatTensor]], indices: list[int]):
         new_kv_cache = ()
         for k,v in kv_cache:
@@ -84,6 +92,7 @@ def select_kv(kv_cache: tuple[list[torch.FloatTensor]], indices: list[int]):
              new_kv_cache += ([k,v],)
         return new_kv_cache
 
+
 @dataclasses.dataclass
 class ChildrenAccept:
     accept_mark :int = None
@@ -91,6 +100,7 @@ class ChildrenAccept:
     position :int = None
     successor_order :int = -1
     residual :torch.FloatTensor = None
+
 
 def _make_causal_mask(
     input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device
@@ -105,6 +115,7 @@ def _make_causal_mask(
     mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
     mask = mask.to(dtype)
     return mask
+
 
 def cuda_graph_for_residual(device="cuda:0", dtype=torch.float16, dim=32000, n_warmups=3, mempool=None):
     static_p = torch.full((dim,), 1, dtype=dtype, device=device)
@@ -134,6 +145,7 @@ def cuda_graph_for_residual(device="cuda:0", dtype=torch.float16, dim=32000, n_w
         return static_residual.clone()
     
     return run
+
 
 def cuda_graph_for_sampling_without_replacement(
                 device="cuda:0", dtype=torch.float16, 
@@ -175,6 +187,7 @@ def cuda_graph_for_sampling_without_replacement(
         return static_position.clone()
     
     return run
+
 
 def cuda_graph_for_sampling_argmax(
                 device="cuda:0", dtype=torch.float16, 
@@ -246,9 +259,3 @@ def cuda_graph_for_sampling_with_replacement(
         return static_position.clone()
     
     return run
-    
-        
-
-
-
-
