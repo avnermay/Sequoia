@@ -4,7 +4,7 @@ import json
 import time
 import torch
 
-from Engine.Engine import GraphInferenceEngineTG, GraphInferenceEngine
+from Engine.Engine import GraphInferenceEngine
 from Engine.offload_engine import OffloadEngine
 from utils import _make_causal_mask
 from tqdm import tqdm, trange
@@ -42,8 +42,8 @@ def benchmark(args):
     else:
         graph_engine = GraphInferenceEngine(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device)
         print("initializing GraphInferenceEngine model")
-        graph_capture_list = [1,2,4,8,16,32,64,128,256,512,768,1024]
-        graph_engine.initialize_cuda_graph(graph_capture_list)
+
+        graph_engine.initialize_cuda_graph(decode_lengths)
         graph_engine.inference(input_ids=prefix, storage_ids=prefix_storage_ids, position_ids=prefix_position_ids, \
                                attn_mask=attn_mask[..., :args.prefix_length,:])
         print("test run OK")
@@ -53,14 +53,14 @@ def benchmark(args):
         input_ids = torch.randint(low=3, high=30000, size=(1, decode_length), device=device)
         storage_ids = torch.arange(decode_length, device=device) + args.prefix_length
         position_ids = storage_ids.clone().unsqueeze(0)
-        if args.offloading:
+        if isinstance(graph_engine, OffloadEngine):
             curr_attn_mask = attn_mask[..., args.prefix_length: args.prefix_length + decode_length,:args.prefix_length + decode_length].clone()
-        else:
+        elif isinstance(graph_engine, GraphInferenceEngine):
             curr_attn_mask = attn_mask[..., args.prefix_length: args.prefix_length + decode_length,:].clone()
 
         for _ in trange(args.warmup, desc=f"warmup, {decode_length=}", leave=False):
             graph_engine.inference(input_ids=input_ids, storage_ids=storage_ids, position_ids=position_ids, attn_mask=curr_attn_mask)
-            if args.offloading:
+            if isinstance(graph_engine, OffloadEngine):
                 graph_engine.set_kv_len(args.prefix_length)
 
         torch.cuda.synchronize()
@@ -68,7 +68,7 @@ def benchmark(args):
 
         for _ in trange(args.num_repeats, desc=f"measuring, {decode_length=}", leave=False):
             graph_engine.inference(input_ids=input_ids, storage_ids=storage_ids, position_ids=position_ids, attn_mask=curr_attn_mask)
-            if args.offloading:
+            if isinstance(graph_engine, OffloadEngine):
                 graph_engine.set_kv_len(args.prefix_length)
 
         torch.cuda.synchronize()
