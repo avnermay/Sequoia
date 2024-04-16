@@ -3,13 +3,14 @@ from .Tree import Tree
 import time
 from Engine.Engine import GraphInferenceEngine, GraphInferenceEngineTG
 from utils import ChildrenAccept
+
+
 class GreedyTree(Tree):
+
     def __init__(self, 
                  draft_model_engine :GraphInferenceEngine,
                  target_model_engine :GraphInferenceEngineTG,
                  prefix :torch.LongTensor,
-                 temperature :float = 0.6,
-                 top_p: float = 0.9,
                  draft_kv_len = 0,
                  target_kv_len = 0,
                  max_length = 256,
@@ -30,8 +31,6 @@ class GreedyTree(Tree):
         self.max_target_seq = max_target_seq
         self.draft_model_engine = draft_model_engine
         self.target_model_engine = target_model_engine
-        self.temperature = temperature
-        self.top_p = top_p
         self.residual_graph = residual_graph
         self.grow_map = grow_map
         self.sampling_callables = sampling_callables
@@ -88,9 +87,6 @@ class GreedyTree(Tree):
         if benchmark:
             x1 = 0.0
             x2 = 0.0
-        
-        
-        
         
         total_branch = sum(n_branch_list)
         max_branch = max(n_branch_list)
@@ -266,16 +262,14 @@ class GreedyTree(Tree):
 
 class GreedyTreeTest(Tree):
     def __init__(self, 
-                 draft_model_engine :GraphInferenceEngine,
-                 target_model_engine :GraphInferenceEngineTG,
-                 prefix :torch.LongTensor,
-                 temperature :float = 0.6,
-                 top_p: float = 0.9,
+                 draft_model_engine: GraphInferenceEngine,
+                 target_model_engine: GraphInferenceEngineTG,
+                 prefix: torch.LongTensor,
                  draft_kv_len = 0,
                  target_kv_len = 0,
                  max_length = 256,
                  max_width = 32,
-                 device :str = 'cpu',
+                 device: str = 'cpu',
                  grow_map = None,
                  attn_mask = None, 
                  sequence = None, 
@@ -286,8 +280,6 @@ class GreedyTreeTest(Tree):
         assert self.max_length == draft_model_engine.engine.max_length
         self.draft_model_engine = draft_model_engine
         self.target_model_engine = target_model_engine
-        self.temperature = temperature
-        self.top_p = top_p
         self.grow_map = grow_map
         self.max_width = max_width
         self.initialize(attn_mask, sequence, new_tokens_buffer, parents_buffer, position_ids, None)
@@ -329,13 +321,9 @@ class GreedyTreeTest(Tree):
 
     @torch.inference_mode()
     def collective_grow_static(self, idx_list :list[int], n_branch_list :list[int], benchmark=False):
-        
-        
-        
         assert len(set(idx_list)) == len(idx_list)
         assert len(self.draft_logits) == (self.num_nodes - self.ground_truth_len + 1)
-        
-    
+
         total_branch = sum(n_branch_list)
         max_branch = max(n_branch_list)
         sampling_logits = self.draft_logits[idx_list]

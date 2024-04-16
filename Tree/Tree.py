@@ -1,6 +1,9 @@
 import torch
 from utils import _make_causal_mask
+
+
 class Tree:
+
     def __init__(self, device :str = 'cpu', max_length = 512, dtype = torch.float16) -> None:
         self.tokens = torch.zeros(max_length, device=device).long()
         self.Successors :list[list[int]] = []
@@ -8,7 +11,6 @@ class Tree:
         self.device = device
         self.max_length = max_length
         self.dtype = dtype
-
 
     def initialize(self, attn_mask, sequence, new_tokens_buffer, parents_buffer, position_ids, active_mark):
         self.full_attn_mask = attn_mask
@@ -26,12 +28,8 @@ class Tree:
         self.num_nodes = len(prefix)
         self.full_attn_mask[:self.max_length, :self.max_length] = _make_causal_mask((1, self.max_length),dtype=self.dtype, device=self.device)
 
-        
-        
-
     def collective_expand_position(self, expand_tokens :torch.LongTensor):
         self.tokens = torch.cat([self.tokens, expand_tokens], dim=-1)
-        
 
     def verbose(self):
         print(self.tokens)
