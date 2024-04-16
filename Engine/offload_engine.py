@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from torch import nn
 from typing import List, Optional, Tuple, Union
 import gc
+
+
 def _make_causal_mask(
     input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device
 ):
@@ -384,16 +386,15 @@ class Llama:
         return hidden_states
 
 
-
     def inference(self,
             input_ids: torch.LongTensor,
             position_ids: torch.LongTensor,
-            attention_mask: torch.FloatTensor):
-        
+            attention_mask: torch.FloatTensor,
+        ):
+
         hidden_states = F.embedding(input_ids, self.embed_tokens)
-       
+
         self.buffer[0].sync_copy(self.layers[0])
-        
 
         torch.cuda.synchronize()
         for idx in range(self.num_layers):
@@ -413,7 +414,9 @@ class Llama:
         logits = F.linear(hidden_states, self.lm_head).float()
         return logits
 
+
 class OffloadEngine:
+
     def __init__(self,
         max_length:int,
         model_name_or_path :str,
@@ -425,23 +428,25 @@ class OffloadEngine:
         self.dtype = dtype
         self.max_length = max_length
         self.engine = Llama(model_name=model_name_or_path, max_length=max_length, device=device, dtype=dtype, stay_layers=stay_layers)
+
     def clear_kv(self):
         self.engine.kv_cache.clear()
-    
+
     def initialize_kv(self, k_cache :torch.Tensor, v_cache :torch.Tensor, kv_len :int):
         self.engine.kv_cache.initialize_kv(k_cache, v_cache, kv_len)
-    
+
     def get_kv_cache(self, in_place=False):
         if not in_place:
             return self.engine.kv_cache.k_cache.clone(), self.engine.kv_cache.v_cache.clone()
         else:
             return self.engine.kv_cache.k_cache, self.engine.kv_cache.v_cache
+
     def gather_kv(self, indices: list[int]):
         self.engine.kv_cache.gather_kv(indices)
-    
+
     def set_kv_len(self, kv_len :int):
         self.engine.kv_cache.set_kv_len(kv_len)
-    
+
     def inference(self,
             input_ids: torch.LongTensor, 
             storage_ids :torch.LongTensor,
@@ -451,52 +456,29 @@ class OffloadEngine:
             return self.engine.inference(input_ids=input_ids, position_ids=position_ids, attention_mask=attn_mask)
 
 
-
 if __name__ == "__main__":
     llm = OffloadEngine(max_length = 256, model_name_or_path = "meta-llama/Llama-2-70b-hf")
-    
-    
-    input_ids = torch.LongTensor([
-        [
-    1, 21429, 29899,  6451, 22545,  1078,   505
-        ]
-    ]).cuda()
-    position_ids = torch.LongTensor([
-        [
-    0, 1, 2, 3, 4, 5, 6
-        ]
-    ]).cuda()
+    input_ids = torch.LongTensor([[
+        1, 21429, 29899,  6451, 22545,  1078,   505
+    ]]).cuda()
+    position_ids = torch.LongTensor([[
+        0, 1, 2, 3, 4, 5, 6
+    ]]).cuda()
 
     attention_mask = _make_causal_mask((1,9), torch.float16, device="cuda:0")
 
     logits = llm.inference(input_ids=input_ids, position_ids=position_ids, attn_mask=attention_mask[:-2, : -2][None, None, :, :], storage_ids=None)
     print(logits)
-    new_input_ids = torch.LongTensor([
-        [
-            1407
-        ]
-    ]).cuda()
+    new_input_ids = torch.LongTensor([[1407]]).cuda()
 
-    new_position_ids = torch.LongTensor([
-        [
-            7
-        ]
-    ]).cuda()
+    new_position_ids = torch.LongTensor([[7]]).cuda()
 
     logits = llm.inference(input_ids=new_input_ids, position_ids=new_position_ids, attn_mask=attention_mask[-2:-1, :-1][None, None, :, :], storage_ids=None)
     print(logits)
 
-    new_input_ids = torch.LongTensor([
-        [
-            1488
-        ]
-    ]).cuda()
+    new_input_ids = torch.LongTensor([[1488]]).cuda()
 
-    new_position_ids = torch.LongTensor([
-        [
-            8
-        ]
-    ]).cuda()
+    new_position_ids = torch.LongTensor([[8]]).cuda()
 
     logits = llm.inference(input_ids=new_input_ids, position_ids=new_position_ids, attn_mask=attention_mask[-1:][None, None, :, :], storage_ids=None)
     print(logits)

@@ -9,6 +9,8 @@ from transformers.modeling_outputs import CausalLMOutputWithPast, BaseModelOutpu
 from torch.nn import CrossEntropyLoss
 from .Llama_KV import KV_Cache
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
+
+
 class LlamaModel_FI(LlamaPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
@@ -71,6 +73,7 @@ class LlamaModel_FI(LlamaPreTrainedModel):
        
         return hidden_states
 
+
 class LlamaModel_TG(LlamaPreTrainedModel):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
@@ -109,9 +112,6 @@ class LlamaModel_TG(LlamaPreTrainedModel):
         kv_cache: KV_Cache = None,
         debug :bool = False,
     ):
-        
-        
-        
         inputs_embeds = self.embed_tokens(input_ids)
         
         # embed positions
@@ -131,6 +131,8 @@ class LlamaModel_TG(LlamaPreTrainedModel):
         hidden_states = self.norm(hidden_states)
        
         return hidden_states
+
+
 class LlamaForCausalLM_FI(LlamaPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -161,7 +163,6 @@ class LlamaForCausalLM_FI(LlamaPreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    
     def forward(
         self,
         input_ids: torch.LongTensor,
@@ -246,7 +247,6 @@ class LlamaForCausalLM_TG(LlamaPreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    
     def forward(
         self,
         input_ids: torch.LongTensor,

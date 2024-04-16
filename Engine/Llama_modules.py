@@ -8,7 +8,10 @@ import torch
 import torch.nn.functional as F
 from typing import List, Optional, Tuple, Union
 import math
+
+
 class LlamaRotaryEmbedding_FI(nn.Module):
+
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__()
 
@@ -133,7 +136,8 @@ class LlamaAttention_FI(nn.Module):
         attn_output = self.o_proj(attn_output)
         
         return attn_output
-    
+
+
 class LlamaAttention_TG(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
@@ -251,6 +255,8 @@ class LlamaAttention_TG(nn.Module):
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
         attn_output = self.o_proj(attn_output)
         return attn_output
+
+
 class LlamaMLP_FI(nn.Module):
     def __init__(self, config:LlamaConfig):
         super().__init__()
@@ -268,6 +274,7 @@ class LlamaMLP_FI(nn.Module):
         
         return down_proj
 
+
 class LlamaRMSNorm_FI(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -283,6 +290,7 @@ class LlamaRMSNorm_FI(nn.Module):
         variance = hidden_states.pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
+
 
 class LlamaDecoderLayer_FI(nn.Module):
     def __init__(self, config: LlamaConfig, layer_idx: int):
@@ -319,8 +327,6 @@ class LlamaDecoderLayer_FI(nn.Module):
                 (see `past_key_values`).
             past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
         """
-        
-        
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -381,8 +387,6 @@ class LlamaDecoderLayer_TG(nn.Module):
                 (see `past_key_values`).
             past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
         """
-        
-        
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)

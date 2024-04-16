@@ -4,6 +4,8 @@ from .Llama_model import LlamaForCausalLM_FI, LlamaForCausalLM_TG
 from typing import List, Optional, Tuple, Union
 import gc
 import accelerate
+
+
 class InferenceEngine:
     def __init__(self, 
         max_length:int,
@@ -57,19 +59,19 @@ class InferenceEngine:
         else:
             return self.kv_cache.k_cache, self.kv_cache.v_cache
 
+
 class InferenceEngineTG:
     def __init__(self, 
         max_length:int,
         model_name_or_path :str,
         dtype = torch.float16,
         device = "cuda:0",
-        offloading = False) -> None:
-        
+        offloading = False,
+    ) -> None:
         self.device = device
         self.dtype = dtype
         self.max_length = max_length
 
-        
         if offloading:
             self.model = LlamaForCausalLM_TG.from_pretrained(model_name_or_path, torch_dtype=dtype)
             self.model.eval()
@@ -83,7 +85,7 @@ class InferenceEngineTG:
         self.model_config = self.model.config
 
         self.kv_cache = KV_Cache(config=self.model_config, max_length=max_length, device=device, dtype=dtype)
-    
+
     @torch.no_grad()
     def model_run(self, 
             input_ids: torch.LongTensor, 
@@ -107,13 +109,13 @@ class InferenceEngineTG:
     
     def clear_kv(self):
         self.kv_cache.clear()
-    
+
     def set_kv_len(self, kv_len :int):
         self.kv_cache.set_kv_len(kv_len)
-    
+
     def initialize_kv(self, k_cache :torch.Tensor, v_cache :torch.Tensor, kv_len :int):
         self.kv_cache.initialize_kv(k_cache, v_cache, kv_len)
-    
+
     def gather_kv(self, indices: list[int]):
         self.kv_cache.gather_kv(indices)
 
@@ -165,7 +167,9 @@ def capture_graph(
     
     return run
 
+
 class GraphInferenceEngine:
+
     def __init__(self, 
         max_length:int,
         model_name_or_path :str,
@@ -178,6 +182,7 @@ class GraphInferenceEngine:
         self.engine = InferenceEngine(max_length=max_length, model_name_or_path=model_name_or_path, dtype=dtype, device=device)
         self.callables = {}
         self.mempool = None
+
     @torch.inference_mode()
     def initialize_cuda_graph(self, 
             decoding_seqlens :List[int],
@@ -193,6 +198,7 @@ class GraphInferenceEngine:
                     n_warmups=n_warmups
                 )
         self.engine.clear_kv()
+
     @torch.inference_mode()
     def graph_inference(self,
             input_ids: torch.LongTensor, 
@@ -220,19 +226,19 @@ class GraphInferenceEngine:
             else:
                 logits = self.inference(input_ids, storage_ids, position_ids, attn_mask)
             return logits
-    
+
     def clear_kv(self):
         self.engine.clear_kv()
-    
+
     def initialize_kv(self, k_cache :torch.Tensor, v_cache :torch.Tensor, kv_len :int):
         self.engine.initialize_kv(k_cache, v_cache, kv_len)
-    
+
     def get_kv_cache(self, in_place=False):
         return self.engine.get_kv_cache(in_place=in_place)
-    
+
     def gather_kv(self, indices: list[int]):
         self.engine.gather_kv(indices)
-    
+
     @torch.inference_mode()
     def inference(self,
             input_ids: torch.LongTensor, 
@@ -245,6 +251,7 @@ class GraphInferenceEngine:
 
 
 class GraphInferenceEngineTG:
+
     def __init__(self, 
         max_length:int,
         model_name_or_path :str,
@@ -256,21 +263,22 @@ class GraphInferenceEngineTG:
         self.dtype = dtype
         self.max_length = max_length
         self.engine = InferenceEngineTG(max_length=max_length, model_name_or_path=model_name_or_path, dtype=dtype, device=device, offloading=offloading)
+
     def clear_kv(self):
         self.engine.clear_kv()
-    
+
     def initialize_kv(self, k_cache :torch.Tensor, v_cache :torch.Tensor, kv_len :int):
         self.engine.initialize_kv(k_cache, v_cache, kv_len)
-    
+
     def get_kv_cache(self, in_place=False):
         return self.engine.get_kv_cache(in_place=in_place)
-    
+
     def gather_kv(self, indices: list[int]):
         self.engine.gather_kv(indices)
-    
+
     def set_kv_len(self, kv_len :int):
         self.engine.set_kv_len(kv_len)
-    
+
     @torch.no_grad()
     def inference(self,
             input_ids: torch.LongTensor, 
@@ -280,10 +288,3 @@ class GraphInferenceEngineTG:
         
         return self.engine.model_run(input_ids=input_ids, storage_ids=storage_ids,
                     attention_mask=attn_mask, position_ids=position_ids)
-
-
-
-
-
-
-
