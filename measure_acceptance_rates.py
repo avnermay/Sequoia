@@ -53,13 +53,14 @@ def get_output_filename(args):
     return f'{output_dir}/{output_file}'
 
 
-def save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file):
+def save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, step, output_file):
     output_branch_prob[1:] = branch_prob / branch_prob.sum(dim=-1)
     results = {
         'branch_prob': branch_prob.cpu().numpy().tolist(),
         'acceptance_rates': output_branch_prob.cpu().numpy().tolist(),
         'num_decoding_steps': num_decoding_steps,
         'num_large_model_steps': num_large_model_steps,
+        'step': step,
     }
     print(f'{results=}')
     if output_file.endswith('.json'):
@@ -125,7 +126,7 @@ def simulation_stochastic(
                 print(num_decoding_steps / num_large_model_steps)
 
             # We save intermediate results after every example.
-            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file)
+            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, step, output_file)
 
     return num_decoding_steps / num_large_model_steps
 
@@ -183,7 +184,7 @@ def simulation_greedy(
                 print(num_decoding_steps / num_large_model_steps)
 
             # We save intermediate results after every example.
-            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file)
+            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, step, output_file)
 
     return num_decoding_steps / num_large_model_steps
 
