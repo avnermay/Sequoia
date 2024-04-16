@@ -42,9 +42,12 @@ def get_output_filename(args):
     if args.output_file is None:
         target_str = f'target_{args.target.replace('/', '--')}'
         draft_str = f'draft_{args.draft.replace('/', '--')}'
-        temp_str = f'temp_{args.temp}'
-        top_p_str = f'top_p_{args.top_p}'
-        output_file = f'{args.dataset}_{target_str}_{draft_str}_{temp_str}_{top_p_str}_acc_rates.json'
+        if args.algorithm == 'stochastic':
+            temp_str = f'temp_{args.temp}'
+            top_p_str = f'top_p_{args.top_p}'
+            output_file = f'{args.dataset}_{target_str}_{draft_str}_{temp_str}_{top_p_str}_stochastic_acc_rates.json'
+        else:
+            output_file = f'{args.dataset}_{target_str}_{draft_str}_greedy_acc_rates.json'
     else:
         output_file = args.output_file
     return f'{output_dir}/{output_file}'
