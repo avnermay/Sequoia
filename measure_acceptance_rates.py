@@ -50,13 +50,20 @@ def get_output_filename(args):
     return f'{output_dir}/{output_file}'
 
 
-def save_acceptance_rates(acceptance_rate_vector, output_file):
-    print(f'{acceptance_rate_vector=}')
+def save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file):
+    output_branch_prob[1:] = branch_prob / branch_prob.sum(dim=-1)
+    results = {
+        'branch_prob': branch_prob.cpu().numpy().tolist(),
+        'acceptance_rates': output_branch_prob.cpu().numpy().tolist(),
+        'num_decoding_steps': num_decoding_steps,
+        'num_large_model_steps': num_large_model_steps,
+    }
+    print(f'{results=}')
     if output_file.endswith('.json'):
         with open(output_file, 'w') as f:
-            json.dump({'acceptance_rates': acceptance_rate_vector.cpu().numpy().tolist()}, f, indent=4)
+            json.dump(results, f, indent=4)
     else:
-        torch.save(acceptance_rate_vector, output_file)    
+        torch.save(output_branch_prob, output_file)
 
 
 def simulation_stochastic(
@@ -113,14 +120,10 @@ def simulation_stochastic(
             target_model.clear_kv()
             if num_large_model_steps > 0:
                 print(num_decoding_steps / num_large_model_steps)
-    print(
-        'total decoding steps: {}.'.format(num_decoding_steps),
-        'large model steps: {}.'.format(num_large_model_steps),
-        'avg decoding step: {}.'.format(num_decoding_steps / num_large_model_steps),
-    )
-    branch_prob = branch_prob / branch_prob.sum(dim=-1) 
-    output_branch_prob[1:] = branch_prob
-    save_acceptance_rates(output_branch_prob, output_file)
+
+            # We save intermediate results after every example.
+            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file)
+
     return num_decoding_steps / num_large_model_steps
 
 
@@ -171,19 +174,14 @@ def simulation_greedy(
                     num_decoding_steps += (valid_tokens.shape[0] - initial_size)
                     num_large_model_steps += 1
 
-                
             draft_model.clear_kv()
             target_model.clear_kv()
             if num_large_model_steps > 0:
                 print(num_decoding_steps / num_large_model_steps)
-    print(
-        'total decoding steps: {}.'.format(num_decoding_steps),
-        'large model steps: {}.'.format(num_large_model_steps),
-        'avg decoding step: {}.'.format(num_decoding_steps / num_large_model_steps),
-    )
-    branch_prob = branch_prob / branch_prob.sum(dim=-1) 
-    output_branch_prob[1:] = branch_prob
-    save_acceptance_rates(output_branch_prob, output_file)
+
+            # We save intermediate results after every example.
+            save_results(branch_prob, output_branch_prob, num_decoding_steps, num_large_model_steps, output_file)
+
     return num_decoding_steps / num_large_model_steps
 
 
