@@ -4,7 +4,7 @@ import json
 import time
 import torch
 
-from Engine.Engine import GraphInferenceEngineTG
+from Engine.Engine import GraphInferenceEngine
 from Engine.offload_engine import OffloadEngine
 from utils import _make_causal_mask
 from tqdm import tqdm, trange
@@ -37,28 +37,39 @@ def benchmark(args):
 
     if args.offloading:
         graph_engine = OffloadEngine(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device)  # set stay_layers?
+        graph_engine.inference(input_ids=prefix, storage_ids=prefix_storage_ids, position_ids=prefix_position_ids, \
+                               attn_mask=attn_mask[..., :args.prefix_length,:args.prefix_length])
     else:
-        graph_engine = GraphInferenceEngineTG(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device, offloading=args.offloading)
+        graph_engine = GraphInferenceEngine(max_length=args.max_length, model_name_or_path=args.model, dtype=dtype, device=device)
+        print("initializing GraphInferenceEngine model")
 
-    graph_engine.inference(input_ids=prefix, storage_ids=prefix_storage_ids, position_ids=prefix_position_ids, attn_mask=attn_mask[..., :args.prefix_length,:args.prefix_length])
+        graph_engine.initialize_cuda_graph(decode_lengths)
+        graph_engine.inference(input_ids=prefix, storage_ids=prefix_storage_ids, position_ids=prefix_position_ids, \
+                               attn_mask=attn_mask[..., :args.prefix_length,:])
+        print("test run OK")
 
     avg_forward_pass_times = []
     for decode_length in decode_lengths:
         input_ids = torch.randint(low=3, high=30000, size=(1, decode_length), device=device)
         storage_ids = torch.arange(decode_length, device=device) + args.prefix_length
         position_ids = storage_ids.clone().unsqueeze(0)
-        curr_attn_mask = attn_mask[..., args.prefix_length: args.prefix_length + decode_length,:args.prefix_length + decode_length].clone()
+        if isinstance(graph_engine, OffloadEngine):
+            curr_attn_mask = attn_mask[..., args.prefix_length: args.prefix_length + decode_length,:args.prefix_length + decode_length].clone()
+        elif isinstance(graph_engine, GraphInferenceEngine):
+            curr_attn_mask = attn_mask[..., args.prefix_length: args.prefix_length + decode_length,:].clone()
 
         for _ in trange(args.warmup, desc=f"warmup, {decode_length=}", leave=False):
             graph_engine.inference(input_ids=input_ids, storage_ids=storage_ids, position_ids=position_ids, attn_mask=curr_attn_mask)
-            graph_engine.set_kv_len(args.prefix_length)
+            if isinstance(graph_engine, OffloadEngine):
+                graph_engine.set_kv_len(args.prefix_length)
 
         torch.cuda.synchronize()
         t1 = time.time()
 
         for _ in trange(args.num_repeats, desc=f"measuring, {decode_length=}", leave=False):
             graph_engine.inference(input_ids=input_ids, storage_ids=storage_ids, position_ids=position_ids, attn_mask=curr_attn_mask)
-            graph_engine.set_kv_len(args.prefix_length)
+            if isinstance(graph_engine, OffloadEngine):
+                graph_engine.set_kv_len(args.prefix_length)
 
         torch.cuda.synchronize()
         t2 = time.time()
