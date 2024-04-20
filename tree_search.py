@@ -18,6 +18,7 @@ def get_args():
     parser.add_argument('--draft_model_speeds', type=str, default=None,
                         help='Json file with draft model speeds as function of # of tokens (only tokens=1 is used)')
     parser.add_argument('--max_depth', type=int, default=16)
+    parser.add_argument('--max_branch', type=int, default=16)
     args = parser.parse_args()
     return args
 
@@ -181,7 +182,7 @@ def plot_tree(tree):
     pos = nx.drawing.nx_pydot.graphviz_layout(G, prog='dot')
 
     # Draw the tree
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(20, 15))
     nx.draw(G, pos, with_labels=False, node_size=50, node_color='lightblue', font_size=12, font_weight='bold')
     plt.show()
 
@@ -209,7 +210,8 @@ if __name__ == '__main__':
 
     max_depth = args.max_depth
     max_budget = valid_budget[-1]
-    max_branch = alpha.shape[0] - 1
+    max_branch = args.max_branch
+    assert args.max_branch <= alpha.shape[0] - 1
     results, T, branch_map = dynamic_program(alpha, max_budget, max_depth, max_branch)
     best_tree_size, best_tree_depth = get_optimal_tree_size_and_depth(draft_inference_time, target_verify_time, valid_budget, results)
     max_branches = T[best_tree_size, best_tree_depth].argmax(dim=0).item()
