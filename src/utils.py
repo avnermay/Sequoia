@@ -690,7 +690,7 @@ def get_dataset(
     else:
         dataset = dataset.map(
             lambda example: tokenize(example, tokenizer, seq_length, fix_chat_format=fix_chat_format),
-            remove_columns=['text', 'prompt', 'completion', 'args', 'uid'],
+            remove_columns=dataset.column_names,
         )
         dataset = dataset.filter(
             lambda example: example['loss_mask'].sum().item() > min_completion_tokens,
