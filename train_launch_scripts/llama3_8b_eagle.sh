@@ -1,8 +1,14 @@
 # Need to download shareGPT
 
-REPO_DIR=/work/avner/git2/Sequoia
-DATA_DIR=/work/avner/data/share_gpt
-WORK_DIR=/work/avner/results/spec_decoding
+# Avner MK8 paths
+# REPO_DIR=/work/avner/git2/Sequoia
+# DATA_DIR=/work/avner/data/share_gpt
+# WORK_DIR=/work/avner/results/spec_decoding
+
+# Avner MK1 paths
+REPO_DIR=/var/cr05_data/avner/git/Sequoia 
+DATA_DIR=/var/cr05_data/avner/data/share_gpt
+WORK_DIR=/var/cr05_data/avner/results/spec_decoding
 
 accelerate launch \
     --num_machines 1 \
@@ -32,3 +38,6 @@ accelerate launch \
     --eval_freq 50 \
     --save_freq 1000 \
     --num_warmup_steps 100
+
+
+/work/avner/results/spec_decoding/standalone-llama-3-8b-chat-2-layers-0
