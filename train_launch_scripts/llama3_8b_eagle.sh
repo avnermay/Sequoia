@@ -38,6 +38,3 @@ accelerate launch \
     --eval_freq 50 \
     --save_freq 1000 \
     --num_warmup_steps 100
-
-
-/work/avner/results/spec_decoding/standalone-llama-3-8b-chat-2-layers-0
